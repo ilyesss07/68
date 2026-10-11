@@ -1,275 +1,240 @@
-# 68
+FICHE MONGODB 
 
-import random
-import hashlib
-import os
+MAJUSCULES = à remplacer (COLLECTION, CHAMP, VALEUR, N, BASE).
+Tout le reste se copie tel quel.
 
-# ==============================================================================
-# 🛡️ TP1 : CHIFFREMENT SYMÉTRIQUE
-# ==============================================================================
+A = la requête de l'annale (celles qui plantaient sont déjà corrigées)
+S = le squelette
 
-def chiffre_cesar(message, decalage):
-    """
-    Chiffre un message avec le code de César.
-    Paramètre réaliste : un texte en français et un décalage entier (ex: 3).
-    """
-    resultat = ""
-    for lettre in message:
-        if lettre.isalpha():
-            # Gestion des majuscules et minuscules
-            base = ord('A') if lettre.isupper() else ord('a')
-            # Formule : (Position + Décalage) % 26
-            chiffre = (ord(lettre) - base + decalage) % 26
-            resultat += chr(base + chiffre)
-        else:
-            # On ne touche pas à la ponctuation
-            resultat += lettre
-    return resultat
+------------------------------------------------------------
+1. Version de MongoDB
 
-def casser_cesar(message_chiffre):
-    """
-    Casse le code par analyse fréquentielle (la lettre 'e' est la plus fréquente).
-    """
-    frequences = {}
-    for lettre in message_chiffre:
-        if lettre.isalpha():
-            char = lettre.lower()
-            frequences[char] = frequences.get(char, 0) + 1
-    
-    if not frequences: return "Message vide"
+   db.version()
 
-    # Trouver la lettre la plus fréquente (supposée être 'e')
-    lettre_max = max(frequences, key=frequences.get)
-    
-    # 'e' est à l'index 4. On calcule le décalage entre la lettre trouvée et 'e'.
-    # Si 'h' (index 7) est la plus fréquente, le décalage probable est 7 - 4 = 3.
-    decalage_estime = (ord(lettre_max) - ord('e')) % 26
-    
-    print(f"[César] Lettre la plus fréquente : '{lettre_max}'. Décalage détecté : {decalage_estime}")
-    return chiffre_cesar(message_chiffre, -decalage_estime)
+------------------------------------------------------------
+2 et 4. Dernier document inséré
 
-def xor_chiffrement_bloc(donnees, cle):
-    """
-    Simule un chiffrement par bloc (type AES/OTP) avec un XOR.
-    Paramètre réaliste : contenu binaire d'un fichier et une clé textuelle.
-    """
-    resultat = bytearray()
-    cle_bytes = cle.encode('utf-8')
-    len_cle = len(cle_bytes)
-    
-    for i, octet in enumerate(donnees):
-        resultat.append(octet ^ cle_bytes[i % len_cle])
-    return resultat
+A: db.user.find().sort({ _id: -1 }).limit(1)
 
-# ==============================================================================
-# 🔑 TP2 : CHIFFREMENT ASYMÉTRIQUE (RSA)
-# ==============================================================================
+S: db.COLLECTION.find().sort({ _id: -1 }).limit(1)
 
-# Outils Mathématiques nécessaires pour RSA
-def pgcd(a, b):
-    while b:
-        a, b = b, a % b
-    return a
+------------------------------------------------------------
+3. Insérer plusieurs documents
 
-def euclide_etendu(a, b):
-    """Retourne (g, x, y) tels que ax + by = g"""
-    if a == 0:
-        return b, 0, 1
-    else:
-        g, y, x = euclide_etendu(b % a, a)
-        return g, x - (b // a) * y, y
+A: db.user.insertMany([
+     { name: "Michel", email: "michel@gmail.com", birthdate: new Date("2000-01-16") },
+     { name: "Bernard", email: "bernard@proton.me", birthdate: new Date("1999-02-17") }
+   ])
 
-def inverse_modulaire(e, phi):
-    """Calcule d tel que (d * e) % phi == 1"""
-    g, x, y = euclide_etendu(e, phi)
-    if g != 1:
-        raise Exception("L'inverse modulaire n'existe pas")
-    return x % phi
+S: db.COLLECTION.insertMany([
+     { CHAMP1: VALEUR, CHAMP2: VALEUR },
+     { CHAMP1: VALEUR, CHAMP2: VALEUR }
+   ])
 
-def est_premier(n, k=5):
-    """Test de primalité de Miller-Rabin (pour générer de grands nombres)."""
-    if n < 2: return False
-    if n == 2 or n == 3: return True
-    if n % 2 == 0: return False
+------------------------------------------------------------
+5. Ajouter des champs à tous les documents   ( {} = tous )
 
-    r, s = 0, n - 1
-    while s % 2 == 0:
-        r += 1
-        s //= 2
-    for _ in range(k):
-        a = random.randrange(2, n - 1)
-        x = pow(a, s, n)
-        if x == 1 or x == n - 1:
-            continue
-        for _ in range(r - 1):
-            x = pow(x, 2, n)
-            if x == n - 1:
-                break
-        else:
-            return False
-    return True
+A: db.user.updateMany({}, { $set: { street: 1, city: 1, zipcode: 1, country: 1, phone: 1, company: 1 } })
 
-def generer_premier(bits):
-    """Génère un nombre premier de la taille spécifiée (ex: 16 bits)."""
-    while True:
-        n = random.getrandbits(bits)
-        if n % 2 == 0: n += 1
-        if est_premier(n):
-            return n
+S: db.COLLECTION.updateMany({}, { $set: { NOUVEAU_CHAMP: VALEUR } })
 
-def generer_cles_rsa(taille_bits=16):
-    """
-    Génère des clés RSA réalistes (pour un TP).
-    taille_bits=16 permet d'avoir des nombres ~30 000-60 000, 
-    suffisants pour chiffrer des blocs ASCII.
-    """
-    p = generer_premier(taille_bits)
-    q = generer_premier(taille_bits)
-    while p == q:
-        q = generer_premier(taille_bits)
-    
-    n = p * q
-    phi = (p - 1) * (q - 1)
-    
-    e = 65537 # Valeur standard pour la clé publique
-    if pgcd(e, phi) != 1:
-        e = 3
-        while pgcd(e, phi) != 1:
-            e += 2
-            
-    d = inverse_modulaire(e, phi)
-    return ((e, n), (d, n))
+------------------------------------------------------------
+6. Importer un CSV
 
-def chiffrer_rsa(message_int, cle_publique):
-    e, n = cle_publique
-    return pow(message_int, e, n)
+   Compass : ouvrir la collection > ADD DATA > Import JSON or CSV file
 
-def dechiffrer_rsa(chiffre_int, cle_privee):
-    d, n = cle_privee
-    return pow(chiffre_int, d, n)
+------------------------------------------------------------
+7. Plus de N ans   ( $lt = plus de N ans, $gt = moins de N ans )
 
-# ==============================================================================
-# 📡 TP3 : INTÉGRITÉ ET CODES CORRECTEURS
-# ==============================================================================
+A: db.user.find({ birthdate: { $lt: new Date(new Date().setFullYear(new Date().getFullYear() - 25)) } })
 
-def calcul_crc(message_binaire, generateur):
-    """
-    Calcul du CRC (reste de la division polynomiale).
-    Paramètre réaliste : "11101" et "1011" (z^3 + x + 1).
-    """
-    n = len(generateur) - 1
-    # Padding : ajout de zéros à la fin
-    donnees = list(message_binaire + '0' * n)
-    diviseur = list(generateur)
-    
-    for i in range(len(message_binaire)):
-        if donnees[i] == '1':
-            for j in range(len(diviseur)):
-                # XOR
-                donnees[i + j] = str(int(donnees[i + j]) ^ int(diviseur[j]))
-    
-    reste = "".join(donnees)[-n:]
-    return message_binaire + reste
+S: db.COLLECTION.find({ CHAMP_DATE: { $lt: new Date(new Date().setFullYear(new Date().getFullYear() - N)) } })
 
-def hash_sha256(texte):
-    """Hashage sécurisé standard."""
-    return hashlib.sha256(texte.encode()).hexdigest()
+------------------------------------------------------------
+8. Texte qui commence par... + tri   ( 1 = croissant, -1 = décroissant )
 
-def hamming_7_4_encode(bits_4):
-    """Encode 4 bits de données en 7 bits (Hamming)."""
-    d = [int(b) for b in bits_4] # d1, d2, d3, d4
-    
-    # Calcul des parités (p1, p2, p3)
-    p1 = d[0] ^ d[1] ^ d[3]
-    p2 = d[0] ^ d[2] ^ d[3]
-    p3 = d[1] ^ d[2] ^ d[3]
-    
-    # Ordre standard : p1 p2 d1 p3 d2 d3 d4
-    return f"{p1}{p2}{d[0]}{p3}{d[1]}{d[2]}{d[3]}"
+A: db.user.find({ email: /^j/i }).sort({ birthdate: 1 })
 
-def hamming_7_4_decode(bits_7):
-    """Corrige une erreur éventuelle sur 7 bits."""
-    b = [int(x) for x in bits_7]
-    
-    # Calcul du syndrome
-    c1 = b[0] ^ b[2] ^ b[4] ^ b[6] # Vérifie 1,3,5,7
-    c2 = b[1] ^ b[2] ^ b[5] ^ b[6] # Vérifie 2,3,6,7
-    c3 = b[3] ^ b[4] ^ b[5] ^ b[6] # Vérifie 4,5,6,7
-    
-    pos_erreur = c3 * 4 + c2 * 2 + c1
-    
-    if pos_erreur != 0:
-        print(f"[Hamming] Erreur détectée et corrigée à la position {pos_erreur}")
-        b[pos_erreur - 1] = 1 - b[pos_erreur - 1] # Inversion du bit
-    else:
-        print("[Hamming] Aucune erreur détectée.")
-        
-    return f"{b[2]}{b[4]}{b[5]}{b[6]}" # Retourne les données d1d2d3d4
+S: db.COLLECTION.find({ CHAMP: /^TEXTE/ }).sort({ CHAMP_TRI: 1 })
 
-# ==============================================================================
-# 🚀 EXÉCUTION DES TESTS AVEC PARAMÈTRES RÉALISTES
-# ==============================================================================
+------------------------------------------------------------
+9. Texte, sans tenir compte des majuscules   ( le i après la regex )
 
-if __name__ == "__main__":
-    print("\n--- TEST TP1 : SYMETRIQUE ---")
-    # Paramètres réalistes : Une vraie phrase et un décalage classique
-    phrase_claire = "La cryptographie est fascinante"
-    decalage = 5
-    
-    crypte = chiffre_cesar(phrase_claire, decalage)
-    print(f"Original : {phrase_claire}")
-    print(f"Chiffré  : {crypte}")
-    print(f"Cassé    : {casser_cesar(crypte)}")
-    
-    # Simulation fichier : création d'un fichier test
-    nom_fichier = "secret_tp1.txt"
-    cle_secrete = "MaCleSecrete123"
-    with open(nom_fichier, "w") as f: f.write("Ceci est le contenu d'un fichier confidentiel.")
-    
-    # Lecture/Ecriture binaire pour simuler le chiffrement de fichier
-    with open(nom_fichier, "rb") as f: data = f.read()
-    data_enc = xor_chiffrement_bloc(data, cle_secrete)
-    print(f"\n[Fichier] Données chiffrées (hex) : {data_enc.hex()[:30]}...")
-    data_dec = xor_chiffrement_bloc(data_enc, cle_secrete)
-    print(f"[Fichier] Données déchiffrées : {data_dec.decode()}")
+A: db.user.find({ country: /France/i })
 
-    print("\n--- TEST TP2 : RSA ---")
-    # Paramètres réalistes : Génération de clés sur 16 bits (suffisant pour encoder des blocs de texte)
-    # Dans la vraie vie, on utiliserait 2048 bits.
-    pub, priv = generer_cles_rsa(taille_bits=16)
-    print(f"Clé Publique (e, n) : {pub}")
-    print(f"Clé Privée   (d, n) : {priv}")
-    
-    message_tp2 = "RSA"
-    # On chiffre chaque caractère séparément (approche naïve réaliste pour un TP)
-    msg_chiffre = [chiffrer_rsa(ord(c), pub) for c in message_tp2]
-    print(f"Message '{message_tp2}' chiffré : {msg_chiffre}")
-    
-    msg_dechiffre = "".join([chr(dechiffrer_rsa(c, priv)) for c in msg_chiffre])
-    print(f"Message déchiffré : {msg_dechiffre}")
+S: db.COLLECTION.find({ CHAMP: /TEXTE/i })
 
-    print("\n--- TEST TP3 : INTÉGRITÉ ---")
-    # 1. CRC : Exemple exact du PDF TP3
-    msg_bin = "11101"
-    poly = "1011" # z^3 + x + 1
-    crc_resultat = calcul_crc(msg_bin, poly)
-    print(f"CRC ({msg_bin} / {poly}) : {crc_resultat} (Devrait être 11101000)")
-    
-    # 2. Hachage : Mot de passe réaliste
-    mdp = "MotDePasseSuperSecurise!"
-    print(f"SHA-256 ('{mdp}') : {hash_sha256(mdp)}")
-    
-    # 3. Hamming : Donnée 4 bits standard
-    data_bits = "1011"
-    encoded = hamming_7_4_encode(data_bits)
-    print(f"Hamming Encodé ({data_bits}) : {encoded}")
-    
-    # Simulation d'erreur : on corrompt le 3ème bit (index 2)
-    # '1' devient '0' ou '0' devient '1'
-    liste_bits = list(encoded)
-    liste_bits[2] = '0' if liste_bits[2] == '1' else '1'
-    corrupted = "".join(liste_bits)
-    print(f"Message reçu (corrompu)  : {corrupted}")
-    
-    decoded = hamming_7_4_decode(corrupted)
-    print(f"Message corrigé et décodé : {decoded}")
+------------------------------------------------------------
+10. Supprimer le plus ancien
+
+A: db.user.deleteOne({ birthdate: db.user.find().sort({ birthdate: 1 }).limit(1).toArray()[0].birthdate })
+
+S: db.COLLECTION.deleteOne({ CHAMP: db.COLLECTION.find().sort({ CHAMP: 1 }).limit(1).toArray()[0].CHAMP })
+
+------------------------------------------------------------
+11. Trouver les doublons
+
+A: db.user.aggregate([
+     { $group: { _id: "$email", count: { $sum: 1 } } },
+     { $match: { count: { $gt: 1 } } }
+   ])
+
+S: db.COLLECTION.aggregate([
+     { $group: { _id: "$CHAMP", count: { $sum: 1 } } },
+     { $match: { count: { $gt: 1 } } }
+   ])
+
+------------------------------------------------------------
+12. Index unique   ( interdit les doublons )
+
+A: db.user.createIndex({ email: 1 }, { unique: true })
+
+S: db.COLLECTION.createIndex({ CHAMP: 1 }, { unique: true })
+
+------------------------------------------------------------
+13. Afficher seulement certains champs
+
+A: db.user.find({ name: "Jane" }, { email: 1, name: 1 })
+
+S: db.COLLECTION.find({ CHAMP: VALEUR }, { CHAMP_A_AFFICHER: 1, AUTRE_CHAMP: 1 })
+
+------------------------------------------------------------
+14. Créer une autre collection   ( 5 groupes dans l'annale )
+
+A: db.group.insertMany([
+     { reference: "admin", name: "Admin", description: "Groupe Administrateur", level: 1 },
+     { reference: "coordinator", name: "Coordinateur", description: "Groupe de Coordination", level: 2 }
+   ])
+
+S: db.NOUVELLE_COLLECTION.insertMany([
+     { CHAMP1: VALEUR, CHAMP2: VALEUR },
+     { CHAMP1: VALEUR, CHAMP2: VALEUR }
+   ])
+
+------------------------------------------------------------
+15a. Modifier un document précis
+
+A: db.user.updateOne({ name: "Jim" }, { $set: { group: "admin" } })
+
+S: db.COLLECTION.updateOne({ CHAMP: VALEUR }, { $set: { CHAMP_A_MODIFIER: NOUVELLE_VALEUR } })
+
+------------------------------------------------------------
+15b. Modifier le premier selon un tri   ( ici : le plus âgé sans groupe )
+
+A: db.user.findOneAndUpdate({ group: { $exists: false } }, { $set: { group: "secretariat" } }, { sort: { birthdate: 1 } })
+
+S: db.COLLECTION.findOneAndUpdate({ CHAMP: VALEUR }, { $set: { CHAMP_A_MODIFIER: NOUVELLE_VALEUR } }, { sort: { CHAMP_TRI: 1 } })
+
+------------------------------------------------------------
+15c. Modifier tous ceux qui n'ont pas encore le champ
+
+A: db.user.updateMany({ group: { $exists: false } }, { $set: { group: "animateur" } })
+
+S: db.COLLECTION.updateMany({ CHAMP: { $exists: false } }, { $set: { CHAMP: VALEUR } })
+
+------------------------------------------------------------
+16. Compter avec plusieurs conditions   ( la virgule = ET )
+
+A: db.user.countDocuments({ group: "animateur", birthdate: { $gt: new Date(new Date().setFullYear(new Date().getFullYear() - 25)) } })
+
+S: db.COLLECTION.countDocuments({ CHAMP1: VALEUR, CHAMP2: { $gt: VALEUR } })
+
+------------------------------------------------------------
+17. Compter + nom qui commence par une lettre
+
+A: db.user.countDocuments({ group: "animateur", birthdate: { $gt: new Date(new Date().setFullYear(new Date().getFullYear() - 25)) }, name: /^J/ })
+
+S: db.COLLECTION.countDocuments({ CHAMP1: VALEUR, CHAMP2: { $gt: VALEUR }, CHAMP3: /^LETTRE/ })
+
+------------------------------------------------------------
+18. Âge moyen après un filtre
+
+A: db.user.aggregate([
+     { $match: { group: "animateur", birthdate: { $gt: new Date(new Date().setFullYear(new Date().getFullYear() - 25)) } } },
+     { $group: { _id: null, averageAge: { $avg: { $divide: [ { $subtract: [new Date(), "$birthdate"] }, 1000 * 60 * 60 * 24 * 365.25 ] } } } }
+   ])
+
+S: db.COLLECTION.aggregate([
+     { $match: { CHAMP: VALEUR } },
+     { $group: { _id: null, NOM_RESULTAT: { $avg: { $divide: [ { $subtract: [new Date(), "$CHAMP_DATE"] }, 1000 * 60 * 60 * 24 * 365.25 ] } } } }
+   ])
+
+------------------------------------------------------------
+19. Les N premiers selon un tri
+
+A: db.user.find({ group: "animateur" }).sort({ birthdate: 1 }).limit(2)
+
+S: db.COLLECTION.find({ CHAMP: VALEUR }).sort({ CHAMP_TRI: 1 }).limit(N)
+
+------------------------------------------------------------
+20. Modifier plusieurs documents   ( $or = OU )
+
+A: db.user.updateMany({ $or: [ { name: "Jil Aktem" }, { name: "Joey" } ] }, { $set: { group: "coordinator" } })
+
+S: db.COLLECTION.updateMany({ $or: [ { CHAMP: VALEUR1 }, { CHAMP: VALEUR2 } ] }, { $set: { CHAMP_A_MODIFIER: NOUVELLE_VALEUR } })
+
+------------------------------------------------------------
+21. Jointure entre deux collections
+
+A: db.user.aggregate([
+     { $lookup: { from: "group", localField: "group", foreignField: "reference", as: "groupDetails" } },
+     { $unwind: "$groupDetails" },
+     { $sort: { "groupDetails.name": 1, email: 1 } }
+   ])
+
+S: db.COLLECTION.aggregate([
+     { $lookup: { from: "AUTRE_COLLECTION", localField: "CHAMP_ICI", foreignField: "CHAMP_LA_BAS", as: "NOM_RESULTAT" } },
+     { $unwind: "$NOM_RESULTAT" },
+     { $sort: { "NOM_RESULTAT.CHAMP": 1, CHAMP: 1 } }
+   ])
+
+------------------------------------------------------------
+22. Nombre et âge moyen par groupe
+
+A: db.user.aggregate([
+     { $group: { _id: "$group", count: { $sum: 1 }, averageAge: { $avg: { $divide: [ { $subtract: [new Date(), "$birthdate"] }, 1000 * 60 * 60 * 24 * 365.25 ] } } } }
+   ])
+
+S: db.COLLECTION.aggregate([
+     { $group: { _id: "$CHAMP_GROUPE", count: { $sum: 1 }, NOM_MOYENNE: { $avg: "$CHAMP_NOMBRE" } } }
+   ])
+
+------------------------------------------------------------
+23. Enregistrer un résultat dans une autre collection
+
+A: db.archive.insertMany(
+     db.user.aggregate([
+       { $group: { _id: "$group", count: { $sum: 1 } } }
+     ]).toArray()
+   )
+
+S: db.COLLECTION_ARCHIVE.insertMany(
+     db.COLLECTION.aggregate([
+       ETAPES
+     ]).toArray()
+   )
+
+------------------------------------------------------------
+25. Transaction : insérer
+
+A: session = db.getMongo().startSession()
+   session.startTransaction()
+   session.getDatabase("TPMongo").user.insertOne({ name: "Alice", birthdate: new Date(), group: "Assistante" })
+   session.commitTransaction()
+   session.endSession()
+
+S: session = db.getMongo().startSession()
+   session.startTransaction()
+   session.getDatabase("BASE").COLLECTION.insertOne({ CHAMP: VALEUR })
+   session.commitTransaction()
+   session.endSession()
+
+------------------------------------------------------------
+26. Transaction : modifier   ( seule la 3e ligne change )
+
+A: session.getDatabase("TPMongo").group.updateOne({ name: "Coordinateur" }, { $set: { name: "Regulateur" } })
+
+S: session.getDatabase("BASE").COLLECTION.updateOne({ CHAMP: VALEUR }, { $set: { CHAMP_A_MODIFIER: NOUVELLE_VALEUR } })
+
+------------------------------------------------------------
+24. Pas de réponse dans l'annale.
