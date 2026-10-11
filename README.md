@@ -1,18 +1,28 @@
-FICHE MONGODB 
+FICHE MONGODB - SQUELETTES (ancien TP noté)
 
-MAJUSCULES = à remplacer (COLLECTION, CHAMP, VALEUR, N, BASE).
-Tout le reste se copie tel quel.
+MAJUSCULES = à remplacer. Tout le reste se copie tel quel.
+COLLECTION = le nom de ta collection : à changer dans chaque requête, ce n'est pas répété.
 
-A = la requête de l'annale (celles qui plantaient sont déjà corrigées)
-S = le squelette
+Pour chaque requête :
+  Sert à    = ce que fait la requête
+  À changer = ce que tu remplaces dans le squelette
+  A         = la requête de l'annale (celles qui plantaient sont déjà corrigées)
+  S         = le squelette
 
 ------------------------------------------------------------
 1. Version de MongoDB
+
+Sert à    : afficher la version du serveur MongoDB.
+À changer : rien.
 
    db.version()
 
 ------------------------------------------------------------
 2 et 4. Dernier document inséré
+
+Sert à    : afficher le dernier document ajouté. L'_id grandit avec le temps : on trie du plus
+            grand au plus petit (-1) et on garde 1 résultat.
+À changer : rien. Pour les N derniers, mettre N dans limit.
 
 A: db.user.find().sort({ _id: -1 }).limit(1)
 
@@ -20,6 +30,10 @@ S: db.COLLECTION.find().sort({ _id: -1 }).limit(1)
 
 ------------------------------------------------------------
 3. Insérer plusieurs documents
+
+Sert à    : ajouter plusieurs documents d'un coup. Pour un seul : insertOne({ ... }).
+À changer : les CHAMP et les VALEUR ; une ligne { ... } par document. Texte entre guillemets,
+            nombre sans, date avec new Date("AAAA-MM-JJ").
 
 A: db.user.insertMany([
      { name: "Michel", email: "michel@gmail.com", birthdate: new Date("2000-01-16") },
@@ -32,7 +46,12 @@ S: db.COLLECTION.insertMany([
    ])
 
 ------------------------------------------------------------
-5. Ajouter des champs à tous les documents   ( {} = tous )
+5. Ajouter des champs à tous les documents
+
+Sert à    : créer un nouveau champ dans tous les documents. La première accolade vide {} veut
+            dire « tous les documents ».
+À changer : NOUVEAU_CHAMP = le nom du champ à créer ; VALEUR = sa valeur de départ. Plusieurs
+            champs : les séparer par des virgules.
 
 A: db.user.updateMany({}, { $set: { street: 1, city: 1, zipcode: 1, country: 1, phone: 1, company: 1 } })
 
@@ -41,24 +60,40 @@ S: db.COLLECTION.updateMany({}, { $set: { NOUVEAU_CHAMP: VALEUR } })
 ------------------------------------------------------------
 6. Importer un CSV
 
+Sert à    : charger dans la collection les données du fichier fourni.
+À changer : rien à taper : ça se fait avec les boutons de Compass.
+
    Compass : ouvrir la collection > ADD DATA > Import JSON or CSV file
 
 ------------------------------------------------------------
-7. Plus de N ans   ( $lt = plus de N ans, $gt = moins de N ans )
+7. Plus de N ans
+
+Sert à    : garder ceux qui ont plus de N ans. On calcule la date d'il y a N ans, puis on garde
+            les dates de naissance qui sont avant ($lt).
+À changer : CHAMP_DATE = le champ date de naissance ; N = l'âge. Pour « moins de N ans » : $gt à
+            la place de $lt.
 
 A: db.user.find({ birthdate: { $lt: new Date(new Date().setFullYear(new Date().getFullYear() - 25)) } })
 
 S: db.COLLECTION.find({ CHAMP_DATE: { $lt: new Date(new Date().setFullYear(new Date().getFullYear() - N)) } })
 
 ------------------------------------------------------------
-8. Texte qui commence par... + tri   ( 1 = croissant, -1 = décroissant )
+8. Texte qui commence par... + tri
+
+Sert à    : garder les documents dont un champ commence par un texte, puis les trier.
+À changer : CHAMP = le champ texte ; TEXTE = le début cherché (entre les / /, sans guillemets) ;
+            CHAMP_TRI = le champ du tri. 1 = croissant, -1 = décroissant.
 
 A: db.user.find({ email: /^j/i }).sort({ birthdate: 1 })
 
 S: db.COLLECTION.find({ CHAMP: /^TEXTE/ }).sort({ CHAMP_TRI: 1 })
 
 ------------------------------------------------------------
-9. Texte, sans tenir compte des majuscules   ( le i après la regex )
+9. Texte, sans tenir compte des majuscules
+
+Sert à    : trouver un mot, qu'il soit écrit en majuscules ou en minuscules. C'est le i après la
+            regex qui fait ça.
+À changer : CHAMP = le champ texte ; TEXTE = le mot cherché.
 
 A: db.user.find({ country: /France/i })
 
@@ -67,12 +102,22 @@ S: db.COLLECTION.find({ CHAMP: /TEXTE/i })
 ------------------------------------------------------------
 10. Supprimer le plus ancien
 
+Sert à    : supprimer le document qui a la plus petite valeur d'un champ (ici la date de
+            naissance la plus ancienne). La partie find().sort().limit(1) va chercher cette
+            valeur, deleteOne supprime le document qui la porte.
+À changer : CHAMP (3 fois, le même) = le champ qui sert à choisir. Dans sort : 1 = la plus
+            petite valeur, -1 = la plus grande.
+
 A: db.user.deleteOne({ birthdate: db.user.find().sort({ birthdate: 1 }).limit(1).toArray()[0].birthdate })
 
 S: db.COLLECTION.deleteOne({ CHAMP: db.COLLECTION.find().sort({ CHAMP: 1 }).limit(1).toArray()[0].CHAMP })
 
 ------------------------------------------------------------
 11. Trouver les doublons
+
+Sert à    : trouver les valeurs présentes plusieurs fois. $group regroupe par le champ et
+            compte ; $match garde les groupes de plus de 1.
+À changer : CHAMP = le champ où chercher les doublons. Garder le $ et les guillemets : "$email".
 
 A: db.user.aggregate([
      { $group: { _id: "$email", count: { $sum: 1 } } },
@@ -85,7 +130,11 @@ S: db.COLLECTION.aggregate([
    ])
 
 ------------------------------------------------------------
-12. Index unique   ( interdit les doublons )
+12. Index unique
+
+Sert à    : interdire deux documents avec la même valeur dans un champ. La commande est refusée
+            tant qu'il reste des doublons.
+À changer : CHAMP = le champ qui doit rester unique.
 
 A: db.user.createIndex({ email: 1 }, { unique: true })
 
@@ -94,12 +143,21 @@ S: db.COLLECTION.createIndex({ CHAMP: 1 }, { unique: true })
 ------------------------------------------------------------
 13. Afficher seulement certains champs
 
+Sert à    : choisir les champs affichés. 1re accolade = le filtre ; 2e accolade = les champs à
+            montrer (1).
+À changer : CHAMP et VALEUR = le filtre ; CHAMP_A_AFFICHER et AUTRE_CHAMP = les champs voulus.
+            Ajouter _id: 0 pour cacher l'_id.
+
 A: db.user.find({ name: "Jane" }, { email: 1, name: 1 })
 
 S: db.COLLECTION.find({ CHAMP: VALEUR }, { CHAMP_A_AFFICHER: 1, AUTRE_CHAMP: 1 })
 
 ------------------------------------------------------------
-14. Créer une autre collection   ( 5 groupes dans l'annale )
+14. Créer une autre collection
+
+Sert à    : créer une deuxième collection (5 groupes dans l'annale). Elle se crée toute seule à
+            la première insertion.
+À changer : NOUVELLE_COLLECTION = son nom ; les CHAMP et les VALEUR de chaque document.
 
 A: db.group.insertMany([
      { reference: "admin", name: "Admin", description: "Groupe Administrateur", level: 1 },
@@ -114,12 +172,22 @@ S: db.NOUVELLE_COLLECTION.insertMany([
 ------------------------------------------------------------
 15a. Modifier un document précis
 
+Sert à    : changer la valeur d'un champ dans UN document. $set crée le champ s'il n'existe pas
+            encore.
+À changer : CHAMP et VALEUR = comment trouver le document ; CHAMP_A_MODIFIER et
+            NOUVELLE_VALEUR = ce qu'on y met.
+
 A: db.user.updateOne({ name: "Jim" }, { $set: { group: "admin" } })
 
 S: db.COLLECTION.updateOne({ CHAMP: VALEUR }, { $set: { CHAMP_A_MODIFIER: NOUVELLE_VALEUR } })
 
 ------------------------------------------------------------
-15b. Modifier le premier selon un tri   ( ici : le plus âgé sans groupe )
+15b. Modifier le premier selon un tri
+
+Sert à    : modifier un seul document, choisi par un tri (ici : le plus âgé qui n'a pas encore
+            de groupe).
+À changer : CHAMP et VALEUR = le filtre ; CHAMP_A_MODIFIER et NOUVELLE_VALEUR ; CHAMP_TRI = le
+            champ qui décide lequel est pris (1 = le plus petit, -1 = le plus grand).
 
 A: db.user.findOneAndUpdate({ group: { $exists: false } }, { $set: { group: "secretariat" } }, { sort: { birthdate: 1 } })
 
@@ -128,12 +196,20 @@ S: db.COLLECTION.findOneAndUpdate({ CHAMP: VALEUR }, { $set: { CHAMP_A_MODIFIER:
 ------------------------------------------------------------
 15c. Modifier tous ceux qui n'ont pas encore le champ
 
+Sert à    : donner une valeur à tous les documents où le champ n'existe pas encore ($exists:
+            false).
+À changer : CHAMP (2 fois, le même) et VALEUR.
+
 A: db.user.updateMany({ group: { $exists: false } }, { $set: { group: "animateur" } })
 
 S: db.COLLECTION.updateMany({ CHAMP: { $exists: false } }, { $set: { CHAMP: VALEUR } })
 
 ------------------------------------------------------------
-16. Compter avec plusieurs conditions   ( la virgule = ET )
+16. Compter avec plusieurs conditions
+
+Sert à    : compter les documents qui respectent toutes les conditions. La virgule veut dire ET.
+À changer : CHAMP1 et VALEUR = 1re condition ; CHAMP2 et VALEUR = 2e condition. $gt = plus
+            grand, $lt = plus petit.
 
 A: db.user.countDocuments({ group: "animateur", birthdate: { $gt: new Date(new Date().setFullYear(new Date().getFullYear() - 25)) } })
 
@@ -142,12 +218,21 @@ S: db.COLLECTION.countDocuments({ CHAMP1: VALEUR, CHAMP2: { $gt: VALEUR } })
 ------------------------------------------------------------
 17. Compter + nom qui commence par une lettre
 
+Sert à    : le même comptage, avec une condition en plus sur le début d'un texte.
+À changer : comme la 16, plus CHAMP3 = le champ texte et LETTRE = la lettre du début.
+
 A: db.user.countDocuments({ group: "animateur", birthdate: { $gt: new Date(new Date().setFullYear(new Date().getFullYear() - 25)) }, name: /^J/ })
 
 S: db.COLLECTION.countDocuments({ CHAMP1: VALEUR, CHAMP2: { $gt: VALEUR }, CHAMP3: /^LETTRE/ })
 
 ------------------------------------------------------------
 18. Âge moyen après un filtre
+
+Sert à    : calculer l'âge moyen d'une partie des documents. $match filtre ; $group avec _id:
+            null met tout dans un seul groupe ; $avg fait la moyenne. Soustraire deux dates
+            donne des millisecondes, la division les change en années.
+À changer : CHAMP et VALEUR = le filtre ; NOM_RESULTAT = le nom du résultat (au choix) ;
+            CHAMP_DATE = le champ date (garder "$...").
 
 A: db.user.aggregate([
      { $match: { group: "animateur", birthdate: { $gt: new Date(new Date().setFullYear(new Date().getFullYear() - 25)) } } },
@@ -162,12 +247,19 @@ S: db.COLLECTION.aggregate([
 ------------------------------------------------------------
 19. Les N premiers selon un tri
 
+Sert à    : garder les N premiers après un tri (ici les 2 plus âgés d'un groupe).
+À changer : CHAMP et VALEUR = le filtre ; CHAMP_TRI = le champ du tri ; N = combien on en garde.
+
 A: db.user.find({ group: "animateur" }).sort({ birthdate: 1 }).limit(2)
 
 S: db.COLLECTION.find({ CHAMP: VALEUR }).sort({ CHAMP_TRI: 1 }).limit(N)
 
 ------------------------------------------------------------
-20. Modifier plusieurs documents   ( $or = OU )
+20. Modifier plusieurs documents
+
+Sert à    : modifier d'un coup les documents qui respectent une condition OU une autre ($or).
+À changer : CHAMP, VALEUR1, VALEUR2 = les documents visés ; CHAMP_A_MODIFIER et
+            NOUVELLE_VALEUR = ce qu'on y met.
 
 A: db.user.updateMany({ $or: [ { name: "Jil Aktem" }, { name: "Joey" } ] }, { $set: { group: "coordinator" } })
 
@@ -175,6 +267,12 @@ S: db.COLLECTION.updateMany({ $or: [ { CHAMP: VALEUR1 }, { CHAMP: VALEUR2 } ] },
 
 ------------------------------------------------------------
 21. Jointure entre deux collections
+
+Sert à    : afficher chaque document avec les infos de l'autre collection. $lookup fait le
+            lien ; $unwind transforme le tableau obtenu en objet ; $sort trie.
+À changer : AUTRE_COLLECTION = la collection à joindre ; CHAMP_ICI = le champ de COLLECTION qui
+            fait le lien ; CHAMP_LA_BAS = le champ correspondant dans AUTRE_COLLECTION ;
+            NOM_RESULTAT = le nom du champ qui reçoit les infos (au choix, le même partout).
 
 A: db.user.aggregate([
      { $lookup: { from: "group", localField: "group", foreignField: "reference", as: "groupDetails" } },
@@ -189,7 +287,13 @@ S: db.COLLECTION.aggregate([
    ])
 
 ------------------------------------------------------------
-22. Nombre et âge moyen par groupe
+22. Nombre et moyenne par groupe
+
+Sert à    : compter et faire une moyenne pour chaque catégorie. _id = le champ de regroupement ;
+            $sum: 1 compte ; $avg fait la moyenne.
+À changer : CHAMP_GROUPE = le champ qui fait les catégories ; NOM_MOYENNE = au choix ;
+            CHAMP_NOMBRE = le champ à moyenner. Pour un âge : remplacer "$CHAMP_NOMBRE" par le
+            $divide de la question 18.
 
 A: db.user.aggregate([
      { $group: { _id: "$group", count: { $sum: 1 }, averageAge: { $avg: { $divide: [ { $subtract: [new Date(), "$birthdate"] }, 1000 * 60 * 60 * 24 * 365.25 ] } } } }
@@ -201,6 +305,11 @@ S: db.COLLECTION.aggregate([
 
 ------------------------------------------------------------
 23. Enregistrer un résultat dans une autre collection
+
+Sert à    : garder le résultat d'une agrégation dans une collection. aggregate calcule, toArray
+            en fait une liste, insertMany l'enregistre.
+À changer : COLLECTION_ARCHIVE = la collection où enregistrer ; ETAPES = les étapes de ton
+            agrégation.
 
 A: db.archive.insertMany(
      db.user.aggregate([
@@ -215,7 +324,15 @@ S: db.COLLECTION_ARCHIVE.insertMany(
    )
 
 ------------------------------------------------------------
+24. Pas de réponse dans l'annale
+
+------------------------------------------------------------
 25. Transaction : insérer
+
+Sert à    : faire des écritures qui sont toutes validées au commitTransaction, ou toutes
+            annulées.
+À changer : BASE = le nom de ta base (la commande db l'affiche) ; COLLECTION ; le document à
+            insérer. Les 4 autres lignes ne changent jamais.
 
 A: session = db.getMongo().startSession()
    session.startTransaction()
@@ -230,14 +347,16 @@ S: session = db.getMongo().startSession()
    session.endSession()
 
 ------------------------------------------------------------
-26. Transaction : modifier   ( seule la 3e ligne change )
+26. Transaction : modifier
+
+Sert à    : la même transaction avec une modification : seule la 3e ligne change.
+À changer : BASE ; COLLECTION ; CHAMP et VALEUR = le document visé ; CHAMP_A_MODIFIER et
+            NOUVELLE_VALEUR.
 
 A: session.getDatabase("TPMongo").group.updateOne({ name: "Coordinateur" }, { $set: { name: "Regulateur" } })
 
 S: session.getDatabase("BASE").COLLECTION.updateOne({ CHAMP: VALEUR }, { $set: { CHAMP_A_MODIFIER: NOUVELLE_VALEUR } })
 
-------------------------------------------------------------
-24. Pas de réponse dans l'annale.
 
 A-A-A--A-A-A-A-A-A-A-A-A-A-A-A--A-A-A-A-A--A-A-A-A-A-A-A-A--A-A-A-A-A-A-A--A-A-A-A-A-A--A-A-A-A-A--A-A-A-A-A-A-A-A--A-A-A-A-A-A-A-A--A-A-A-A-A-A-A-A--A-A-A-A-A-A-A-----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
